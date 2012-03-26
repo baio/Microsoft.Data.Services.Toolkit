@@ -107,9 +107,10 @@
         {
             var visitor = new ODataExpressionVisitor(expression);
             var operation = visitor.Eval();
-
+            /*
             if (HttpContext.Current != null)
                 HttpContext.Current.Items.Add("ODataQueryOperation.Current", operation);
+             */
 
             return this.ExecuteQuery(operation);
         }

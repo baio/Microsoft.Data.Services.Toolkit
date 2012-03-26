@@ -6,6 +6,7 @@
     using System.Linq;
     using System.Linq.Expressions;
     using Microsoft.Data.Services.Toolkit.Providers;
+    using System.Collections;
 
     /// <summary>
     /// A custom implementation for the <see cref="IDataServiceUpdateProvider"/> contract.
@@ -53,7 +54,10 @@
         /// <returns>An <see cref="IQueryable"/> for a given type.</returns>
         public IQueryable<T> CreateQuery<T>()
         {
-            _queryableTypeNames.Add(typeof(T).FullName, typeof(T).AssemblyQualifiedName);
+            if (!_queryableTypeNames.ContainsKey(typeof(T).FullName))
+            {
+                _queryableTypeNames.Add(typeof(T).FullName, typeof(T).AssemblyQualifiedName);
+            }
 
             return new ODataQuery<T>(new ODataQueryProvider<T>(this.RepositoryFor));
         }
@@ -81,19 +85,6 @@
             return this._currentEntity;
         }
 
-        /// <summary>
-        /// Sets the current operation as 'AddReferenceToCollection' and the involved entities references.
-        /// </summary>
-        /// <param name="targetResource">The target resource.</param>
-        /// <param name="propertyName">The property name.</param>
-        /// <param name="resourceToBeAdded">The resource to be added.</param>
-        public void AddReferenceToCollection(object targetResource, string propertyName, object resourceToBeAdded)
-        {
-            this._currentOperation = "AddReferenceToCollection";
-            this._currentEntity = targetResource;
-            this._currentRelatedEntity = resourceToBeAdded;
-            _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity });
-        }
 
         /// <summary>
         /// Executes the repository method CreateDefaultEntity and sets the current operation value to 'CreateResource'.
@@ -218,6 +209,9 @@
                 if (_currentOperation == "AddReferenceToCollection")
                     ExecuteMethodIfExists(repository, "CreateRelation", _currentEntity, _currentRelatedEntity);
 
+                if (_currentOperation == "RemoveReferenceFromCollection")
+                    ExecuteMethodIfExists(repository, "DeleteRelation", _currentEntity, _currentRelatedEntity);
+
             }
         }
 
@@ -266,6 +260,29 @@
         }
 
         /// <summary>
+        /// Sets the current operation as 'AddReferenceToCollection' and the involved entities references.
+        /// </summary>
+        /// <param name="targetResource">The target resource.</param>
+        /// <param name="propertyName">The property name.</param>
+        /// <param name="resourceToBeAdded">The resource to be added.</param>
+        public void AddReferenceToCollection(object targetResource, string propertyName, object resourceToBeAdded)
+        {
+            this._currentOperation = "AddReferenceToCollection";
+            this._currentEntity = targetResource;
+            this._currentRelatedEntity = resourceToBeAdded;
+            if (targetResource is System.Collections.IEnumerable)
+            {
+                foreach (var entity in (System.Collections.IEnumerable)targetResource)
+                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = _currentRelatedEntity });
+            }
+            else
+            {
+                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity });
+            }
+        }
+
+
+        /// <summary>
         /// Throws <see cref="NotImplementedException"/>.
         /// </summary>
         /// <param name="targetResource">The target resource.</param>
@@ -273,7 +290,22 @@
         /// <param name="resourceToBeRemoved">The resource to be removed from the collection.</param>
         public void RemoveReferenceFromCollection(object targetResource, string propertyName, object resourceToBeRemoved)
         {
-            throw new NotImplementedException();
+            this._currentOperation = "RemoveReferenceFromCollection";
+            this._currentEntity = targetResource;
+            this._currentRelatedEntity = resourceToBeRemoved;
+            if (targetResource is System.Collections.IEnumerable)
+            {
+                int i = 0;
+                foreach (var entity in (System.Collections.IEnumerable)targetResource)
+                {
+                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = ((IEnumerable)_currentRelatedEntity).Cast<object>().ToArray()[i] });
+                    i++;
+                }
+            }
+            else
+            {
+                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity });
+            }
         }
 
         /// <summary>

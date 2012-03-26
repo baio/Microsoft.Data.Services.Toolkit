@@ -13,6 +13,7 @@
         /// <summary>
         /// Gets the current <see cref="ODataQueryOperation"/> from the current <see cref="HttpContext"/>.
         /// </summary>
+        /*
         public static ODataQueryOperation Current
         {
             get
@@ -23,6 +24,7 @@
                 return null;
             }
         }
+         */
 
         /// <summary>
         /// Gets or sets the operation <see cref="Type"/>.
