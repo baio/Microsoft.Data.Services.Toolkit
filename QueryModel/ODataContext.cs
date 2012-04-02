@@ -25,15 +25,15 @@
                 this.Entity = Entity;
 
                 this.Operation = Operation;
-
-                this.RelatedEntity = RelatedEntity;
             }
 
             internal object Entity { get; set; }
 
+            internal string Operation { get; set; }
+
             internal object RelatedEntity { get; set; }
 
-            internal string Operation { get; set; }
+            internal string RelatedProperty { get; set; }
         }
 
         private IDictionary<string, string> _queryableTypeNames;
@@ -207,17 +207,19 @@
                     ExecuteMethodIfExists(repository, "Remove", _currentEntity);
 
                 if (_currentOperation == "AddReferenceToCollection")
-                    ExecuteMethodIfExists(repository, "CreateRelation", _currentEntity, _currentRelatedEntity);
+                    ExecuteMethodIfExists(repository, "CreateRelation", _currentEntity, _currentRelatedEntity, batchContext.RelatedProperty);
 
                 if (_currentOperation == "RemoveReferenceFromCollection")
-                    ExecuteMethodIfExists(repository, "DeleteRelation", _currentEntity, _currentRelatedEntity);
+                    ExecuteMethodIfExists(repository, "DeleteRelation", _currentEntity, _currentRelatedEntity, batchContext.RelatedProperty);
 
+                if (_currentOperation == "SetReference")
+                    ExecuteMethodIfExists(repository, "SetRelation", _currentEntity, _currentRelatedEntity, batchContext.RelatedProperty);
             }
         }
 
         private object ExecuteMethodIfExists(object repository, string methodName, params object[] parameterValues)
         {
-            var methodSignature = parameterValues.Select(pv => pv.GetType()).ToArray();
+            var methodSignature = parameterValues.Select(pv => pv == null ? typeof(object) : pv.GetType()).ToArray();
             var method = repository.GetType().GetMethod(methodName, methodSignature);
 
             if (method != null)
@@ -247,7 +249,8 @@
         /// <param name="propertyValue">The property value.</param>
         public void SetReference(object targetResource, string propertyName, object propertyValue)
         {
-            _currentOperation = "ModifyResource";
+            //_currentOperation = "ModifyResource";
+            _currentOperation = "SetReference";
             _currentEntity = targetResource;
 
             var resource = targetResource.WrapIntoEnumerable().First();
@@ -256,7 +259,19 @@
             if (!property.CanWrite)
                 return;
 
-            property.SetValue(resource, propertyValue, null);
+            //property.SetValue(resource, propertyValue, null);
+            if (propertyValue != null)
+            {
+                foreach (var entity in (System.Collections.IEnumerable)propertyValue)
+                {
+                    _batchContexts.Add(new BatchContext(resource, _currentOperation) { RelatedEntity = entity, RelatedProperty = propertyName });
+                }
+            }
+            else
+            {
+                _batchContexts.Add(new BatchContext(resource, _currentOperation) { RelatedEntity = null, RelatedProperty = propertyName });
+            }
+
         }
 
         /// <summary>
@@ -273,11 +288,11 @@
             if (targetResource is System.Collections.IEnumerable)
             {
                 foreach (var entity in (System.Collections.IEnumerable)targetResource)
-                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = _currentRelatedEntity });
+                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = _currentRelatedEntity, RelatedProperty = propertyName });
             }
             else
             {
-                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity });
+                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity, RelatedProperty = propertyName });
             }
         }
 
@@ -298,13 +313,13 @@
                 int i = 0;
                 foreach (var entity in (System.Collections.IEnumerable)targetResource)
                 {
-                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = ((IEnumerable)_currentRelatedEntity).Cast<object>().ToArray()[i] });
+                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = ((IEnumerable)_currentRelatedEntity).Cast<object>().ToArray()[i], RelatedProperty = propertyName });
                     i++;
                 }
             }
             else
             {
-                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity });
+                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity, RelatedProperty = propertyName });
             }
         }
 
