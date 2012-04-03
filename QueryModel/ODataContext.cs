@@ -254,23 +254,13 @@
             _currentEntity = targetResource;
 
             var resource = targetResource.WrapIntoEnumerable().First();
+            var toBeSet = propertyValue != null ?  propertyValue.WrapIntoEnumerable().First() : null;
             var property = resource.GetType().GetProperty(propertyName);
 
             if (!property.CanWrite)
                 return;
 
-            //property.SetValue(resource, propertyValue, null);
-            if (propertyValue != null)
-            {
-                foreach (var entity in (System.Collections.IEnumerable)propertyValue)
-                {
-                    _batchContexts.Add(new BatchContext(resource, _currentOperation) { RelatedEntity = entity, RelatedProperty = propertyName });
-                }
-            }
-            else
-            {
-                _batchContexts.Add(new BatchContext(resource, _currentOperation) { RelatedEntity = null, RelatedProperty = propertyName });
-            }
+            _batchContexts.Add(new BatchContext(resource, _currentOperation) { RelatedEntity = toBeSet, RelatedProperty = propertyName });
 
         }
 
@@ -285,15 +275,11 @@
             this._currentOperation = "AddReferenceToCollection";
             this._currentEntity = targetResource;
             this._currentRelatedEntity = resourceToBeAdded;
-            if (targetResource is System.Collections.IEnumerable)
-            {
-                foreach (var entity in (System.Collections.IEnumerable)targetResource)
-                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = _currentRelatedEntity, RelatedProperty = propertyName });
-            }
-            else
-            {
-                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity, RelatedProperty = propertyName });
-            }
+
+            var resource = targetResource.WrapIntoEnumerable().First();
+            var toBeAdded = resourceToBeAdded.WrapIntoEnumerable().First();
+
+            _batchContexts.Add(new BatchContext(resource, _currentOperation) { RelatedEntity = toBeAdded, RelatedProperty = propertyName });
         }
 
 
@@ -308,19 +294,11 @@
             this._currentOperation = "RemoveReferenceFromCollection";
             this._currentEntity = targetResource;
             this._currentRelatedEntity = resourceToBeRemoved;
-            if (targetResource is System.Collections.IEnumerable)
-            {
-                int i = 0;
-                foreach (var entity in (System.Collections.IEnumerable)targetResource)
-                {
-                    _batchContexts.Add(new BatchContext(entity, _currentOperation) { RelatedEntity = ((IEnumerable)_currentRelatedEntity).Cast<object>().ToArray()[i], RelatedProperty = propertyName });
-                    i++;
-                }
-            }
-            else
-            {
-                _batchContexts.Add(new BatchContext(_currentEntity, _currentOperation) { RelatedEntity = _currentRelatedEntity, RelatedProperty = propertyName });
-            }
+
+            var resource = targetResource.WrapIntoEnumerable().First();
+            var toBeRemoved = resourceToBeRemoved.WrapIntoEnumerable().First();
+
+            _batchContexts.Add(new BatchContext(resource, _currentOperation) { RelatedEntity = toBeRemoved, RelatedProperty = propertyName });
         }
 
         /// <summary>
