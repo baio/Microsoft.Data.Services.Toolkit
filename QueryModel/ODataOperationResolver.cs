@@ -191,7 +191,7 @@
                 }
 
                 // Pass #3: Check for a context parameter.
-                return operation.ContextParameters.SingleOrDefault(d => d.Key.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase)).Value;
+                return operation.ContextParameters != null ? operation.ContextParameters.SingleOrDefault(d => d.Key.Equals(parameter.Name, StringComparison.OrdinalIgnoreCase)).Value : null;
             };
         }
     }
