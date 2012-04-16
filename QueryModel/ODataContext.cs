@@ -202,17 +202,17 @@
 
                 if (_currentOperation == "CreateResource" || _currentOperation == "ModifyResource")
                     ExecuteMethodIfExists(repository, "Save", _currentEntity);
-
-                if (_currentOperation == "DeleteResource")
+                
+                else if (_currentOperation == "DeleteResource")
                     ExecuteMethodIfExists(repository, "Remove", _currentEntity);
 
-                if (_currentOperation == "AddReferenceToCollection")
+                else if (_currentOperation == "AddReferenceToCollection")
                     ExecuteMethodIfExists(repository, "CreateRelation", _currentEntity, _currentRelatedEntity, batchContext.RelatedProperty);
 
-                if (_currentOperation == "RemoveReferenceFromCollection")
+                else if (_currentOperation == "RemoveReferenceFromCollection")
                     ExecuteMethodIfExists(repository, "DeleteRelation", _currentEntity, _currentRelatedEntity, batchContext.RelatedProperty);
 
-                if (_currentOperation == "SetReference")
+                else if (_currentOperation == "SetReference")
                     ExecuteMethodIfExists(repository, "SetRelation", _currentEntity, _currentRelatedEntity, batchContext.RelatedProperty);
             }
         }
